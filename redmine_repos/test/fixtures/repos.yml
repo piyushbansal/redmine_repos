@@ -1,0 +1,15 @@
+# Read about fixtures at http://ar.rubyonrails.org/classes/Fixtures.html
+one:
+  id: 1
+  lab_id: MyString
+  reponame: MyString
+  description: MyString
+  created_on: 2012-07-02 06:10:03
+  repotype: MyString
+two:
+  id: 2
+  lab_id: MyString
+  reponame: MyString
+  description: MyString
+  created_on: 2012-07-02 06:10:03
+  repotype: MyString

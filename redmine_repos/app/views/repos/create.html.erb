@@ -1,0 +1,13 @@
+<div class="contextual">
+  <%=link_to  ('<h3><b>Back</b></h3>', {:controller => 'repos', :action => 'index', :project_id => params[:project_id]}) %>
+</div>
+<h2>Create a New Repository</h2>
+<% labelled_tabular_form_for :repo, @repo, :url => { :action => "create" , :project_id => params[:project_id], :method => :post} do |f| %>
+<%= render :partial => 'form', :locals => { :f => f } %>
+<%= submit_tag l(:button_create) %>
+<%= javascript_tag "Form.Element.focus('url');" %>
+<% end %>
+
+<div>
+  <p><b>Note:The repository name should not contain any spaces</b></p>
+</div>

@@ -1,0 +1,36 @@
+<div class="contextual">
+  <%=link_to  ('New Repository', {:controller => 'repos', :action => 'create', :project_id => @project}, :class => 'icon icon-add')%>
+</div>
+
+<h2>Repo List</h2>
+
+<% delete_allowed = User.current.allowed_to?(:new_repo, @project) %>
+
+<table class="list files" cellpadding=1 border=1 style="width:60%;" align="center">
+  <thead><tr>
+      <%= sort_header_tag('Sno', :caption => l(:field_id)) %>
+      <%= sort_header_tag('Repository Name', :caption => l(:field_reponame), :default_order => 'desc') %>
+      <%= sort_header_tag('Description', :caption => l(:field_description), :default_order => 'desc') %>
+      <%= sort_header_tag('Created On', :caption => l(:field_created_on), :default_order => 'desc') %>
+      <%= sort_header_tag('Repo Type', :caption => l(:field_repotype), :default_order => 'desc') %>
+      <th></th>
+  </tr></thead>
+  <% i = 0 %>
+  <% @repos.each do |repo| %>
+  <% if params[:project_id] == repo.lab_id %>
+  <% i = i+1 %>
+  <tr>
+    <td class="id" align="center"><%= i %></td>
+    <td class="reponame" align="center" style="width:30%;"><%= repo.reponame %></td>
+    <td class="reponame" align="center" style="width:30%;"><%= repo.description %></td>
+    <td class="created_on" align="center" style="width:20%;"><%= repo.created_on.strftime("%Y-%m-%d %H:%M:%S") %></td>
+    <td class="repotype" align="center" style="width:30%;"><%= repo.repotype %></td>
+    <td align="center" style="width:10%"> <%= link_to(image_tag('delete.png'), {:controller => 'svnadmins', :action => 'destroy', :project_id => @project , :repo => repo.reponame}, :confirm => l(:text_are_you_sure), :method => :post) if delete_allowed %></td>
+  </tr>
+  <% end %>
+  <% end %>
+</table>
+<div style="align: center">
+  <p style="font-size:12"><b>Note: </b>After you create your repository, Checkout from your repository using <br><br><b>svn co svn+ssh://<%= User.current.login %>@svn.virtual-labs.ac.in/labs/<%= params[:project_id] %>/&lt;Repository Name&gt;</b></p>
+</div>
+ 

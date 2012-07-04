@@ -1,0 +1,11 @@
+require 'redmine'
+
+Redmine::Plugin.register :redmine_repos do
+  name 'Redmine Repos plugin'
+  author 'Swetha V'
+  description 'This is a plugin for Redmine'
+  version '0.0.1'
+
+  permission :repos, { :repos => [:index] }, :public => true
+  menu :project_menu, :repos, { :controller => 'repos', :action => 'index' }, :caption => 'Repositories', :after => :activity, :param => :project_id
+end

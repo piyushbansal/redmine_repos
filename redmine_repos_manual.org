@@ -1,0 +1,202 @@
+#+TITLE: Understanding How redmine_svnadmins Works
+#+AUTHOR: Piyush Bansal (201102022)
+#+STARTUP: hidestars
+#+STARTUP: overview
+
+* Model ,View,and Controller In Context Of Redmine Plugins
+In any web based application, we basically need to serve three basic
+functionalities.
+
+** MODEL
+ 
+ First of these is being able to represent data of the
+application and contain rules specified by the developer, to manipulate
+that data.
+This in our case , is called a Model. 
+Model, in ruby on rails is primarily used for managing the rules of
+interaction with a corresponding database.
+
+** VIEW
+
+Next we have another basic functionality , which is providing the user
+with a user interface. In Ruby on Rails we call it a "View".  
+Here ,in our case , most of the pages served would be HTML files with some
+embedded Ruby code, that perform the tasks related solely to the
+presentation of data.
+Views handle the job of providing data to the web
+browser or other tool that is used to make requests from our
+application.
+
+** CONTROLLER
+
+Next we have , what can be called as a bridge between
+models and view. This is called a Controller and is responsible for
+processing the incoming requests from the web browser, interrogating
+the model for data and passing that data onto view.
+
+* The Model in the plugin
+  
+In our case , one model corresponds to basically one table in our
+database.
+
+To understand it better , let us go into
+ApplicationRoot/vendor/plugin/redmine_repos/db/migrate/001_create_repos.rb.
+Here we see that a class CreateRepos is inheriting from
+ActiveRecord::Migration, which happens to be a basic class defined in
+ApplicationRoot by Redmine itself.
+ 
+** up and down methods
+
+ Next we define two methods called-
+"up" and "down". up method is basically used to create table( notice
+,that it calls create_table) in the database by name of repos and
+would have columns called lab_id, reponame,description,repotype,created_on, all
+of which are string type except the created_on column, which is
+timestamp type. 
+
+The "down" method is , as we can see calling
+drop_table method, which would delete our table called repos from our
+database.
+
+** Database Interaction
+In this case it becomes important to go to
+ApplicationRoot/config/databse.yml . 
+ 
+This file here contains
+configuration options for the type of database to use for various
+phases of application development.
+
+Notice that the adapter is set to
+mysql , which means that a table called "repos" must be there in our
+database with all those columns we talked about above.
+
+* The View And The Controller of the plugin  
+Each file in the folder
+ApplicationRoot/vendor/plugins/redmine_repos/app/view 
+corresponds to a method defined in controller. 
+
+So , as of now we would take controller and view parallel to one another.
+Let us first go to the view file index.html.erb .
+ 
+Notice the extension .erb which stands for embedded ruby with html in it .
+ 
+This page would be the page that gets displayed whenever 
+user visits the homepage of our plugin. 
+At the top we notice a line that reads
+ 
+#+BEGIN_EXAMPLE
+<%=link_to ('New Repository' ,
+ { :controller => 'repos' ,:action => 'create' , :project_id
+ =>@project } if @project && User.current.allowed_to?(:new_repo,
+ @project) %>.
+#+END_EXAMPLE
+
+ This line , as we see starts and ends with <% %> symbols, and is erb.
+
+ Here we are using an inbuilt method called link_to that creates a
+ link. Here our link points to controller called 'repos', action
+ called 'create' which is a method defined in controller and also has
+ a view associated with it , called create.html.erb .
+
+Both the create and delete functions can , if called ,
+change our database and hence we need to authenticate the users 
+calling these functions. 
+So we use inbuilt method called User.current.allowed_to? 
+which checks if the user is allowed to call these functions or not. 
+
+Also we see this part of line User.current.allowed_to?(:new_repo,
+ @project), Here its important to see that this variable(:new_repo) is
+ defined in file called init.rb in PluginRoot directory ie
+ redmine_svnadmins , where permission to :new_repo is not set to
+ public.
+
+Now Let us go back to controller and open file called repos_controller.rb.
+
+Here we find that we have included SortHelper, which is a module that
+ helps us to get sorted query from our database as we require. 
+
+Here index method is defined that declares two containers called
+ project and repos that enquire the database for repo or project and
+ fill the returned values in themselves.
+
+In the create method we have similar container defined called
+ "project".
+
+ Next we check if the user is allowed to create the repo or not. If
+ returned false , we render 403 page and return. If returned true
+ ,then the user is allowed to create a repo by calling inbuilt
+ function called Repo.new(). { Here "new" is inbuilt and is being used
+ to create a new repo.} .
+
+Now we populate the fields called reponame , lab_id , desciption by
+ params[:repo][:reponame]. 
+
+For this we must have a look at the user interface , ie view part in
+ our browsers. When we want to create a new repository , we are
+ directed to a page, which has two fields called description and
+ reponame. Now these must be linked to that specific repository at
+ backend. So we have to pass two parameters to uniquely identify each
+ repo's description and reponame.
+
+Next in the controller's create method we see that we call manage
+ function. This function is defined in our model - repo.rb . So lets
+ go there and examine what exactly does it do , keeping in mind the
+ parameters / arguments that are passed to this function before
+ calling. In PluginRoot/app/model/repo.rb we find this function .
+
+ First of all it asks for an action , which indeed is a method defined
+ in controller , if we call this function , as we did through create
+ function in our controller, we passed it 'create' as action .
+
+Next we execute a script called repoadmin.py ,( You can find the
+ documentation about how that script works inside the script itself as
+ comments).
+
+Going back to controller's create method, we see that
+ whatever that function returns is stored in variable called
+ response.Now response , if we study that script (or equivalently read
+ its documentation) is an array containing two things, the first being
+ an integer, that is 1 if function exists successfully.
+
+That's why in the next line(of controller) , we have checked if it
+ returned 1. If it does , then we save that repo and redirect to index
+ page and return .
+
+Otherwise we return to index page and flash a message that says that
+ repository creation failed.
+
+Similarly we have "destroy" method in the controller .  Now the only
+ file we have left untouched is _form.rhtml. This is nothing but a
+ table that has all those fields defined in it like reponame, lab_id
+ etc .It is being used in the create.html.erb and index.html.erb 
+
+Notice that it has a line that reads
+
+#+BEGIN_EXAMPLE
+<p><%= f.select :repotype, options_for_select([['SVN','svn'],
+['Git','git'], ['Bazaar','bazaar']]) %>
+#+END_EXAMPLE
+
+To understand this line , its important to understand this piece of
+code in create.html.erb
+
+#+BEGIN_EXAMPLE
+<% labelled_tabular_form_for :repo, @repo, :url => { :action =>
+"create" , :project_id => params[:project_id], :method => :post}
+do |f| %> 
+<%= render :partial => 'form', :locals => { :f => f } %>
+#+END_EXAMPLE
+
+Here we are passing an array "@repo" and then for each of its field we
+obtain ruby objects, which would be used in _form.rhtml.  f.select,
+f.text_field,f.text_area are mapped to repotype, reponame,description
+respectively. The second line , renders view of _form (while calling
+create method), and maps each of the fields there as written above.
+
+ 
+
+* NOTE:
+1. It is required that this is read with plugin soure code in fornt of
+you .  
+2. Also refer to official plugin development tutorial at
+http://www.redmine.org/projects/redmine/wiki/Plugin_Tutorial?version=66 

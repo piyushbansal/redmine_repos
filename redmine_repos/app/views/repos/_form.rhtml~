@@ -1,0 +1,6 @@
+<%=error_messages_for 'Repos' %>
+<div class="box">
+<p><label>Type of Repo  </label>       <%= select_tag(:repotype, options_for_select([['SVN',1], ['Git',2], ['Bazaar',3]])) %>
+<p><%= f.text_field :reponame, :required => true, :size => 40 %></p>
+<p><%= f.text_area :description, :rows => 5, :cols => 60, :required => true %></p>
+</div>

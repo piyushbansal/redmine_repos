@@ -1,0 +1,63 @@
+class ReposController < ApplicationController
+  helper :sort
+  include SortHelper
+  verify :method => :post, :only => :destroy
+  
+  def index
+    sort_init 'Sno', 'asc'
+    sort_update 'Sno' => "id",
+    'Repository Name' => "#{Repo.table_name}.reponame",
+    'Created On' => "#{Repo.table_name}.created_on",
+    'Repository Type' => "#{Repo.table_name}.repotype"
+    @project = Project.find(params[:project_id])
+    @repos = Repo.find(:all, :order => sort_clause) # @project.releases
+  end
+
+  def create
+    @project = Project.find(params[:project_id])
+    # if !( @project && User.current.allowed_to?(:new_repo, @project))
+    #   render_403
+    #   return
+    # end
+    @repo = Repo.new()
+    if request.post?
+      @repo.reponame = params[:repo][:reponame].gsub(" ","-")
+      @repo.lab_id = params[:project_id]
+      @repo.description = params[:repo][:description]
+      @repo.repotype = params[:repo][:repotype]
+      response = @repo.manage('add',@repo.repotype,@repo.lab_id,@repo.reponame)
+      print response['status']
+      flash.discard
+      if response['status'] == 1
+        @repo.created_on = Time.now.strftime("%Y-%m-%d %H:%M")
+        @repo.save
+        redirect_to :controller => 'repos', :action => 'index', :project_id => @project
+        flash[:notice] = "Creation successful"
+        return
+      else
+        redirect_to :controller => 'repos', :action => 'index', :project_id => @project
+        flash[:error] = "Creation failed: " + response[:summary]
+        return
+      end
+    end
+  end
+  def destroy
+    @project = Project.find(params[:project_id])
+    @repos = Repo.find(:all)
+    print "Hi"
+    if request.post?
+      @repos.each do |@repo|
+        if params[:project_id] == @repo.lab_id
+          if params[:repo] == @repo.reponame
+            print "ello"
+            @repo.manage('discard',@repo.repotype,@repo.lab_id,@repo.reponame)
+            print "hello"
+            @repo.delete
+            redirect_to :controller => 'repos', :action => 'index', :project_id => params[:project_id]
+            return
+          end
+        end
+      end
+    end
+  end
+end
